@@ -1112,8 +1112,8 @@ main = hspec $ do
                                        (makePoint 0 1 (-5), makeVector 0 0 1, 0),
                                        (makePoint 0 1.5 (-2), makeVector 0 0 1, 2)]
                        mapM_ (\(point, direction, count) -> do
-                                                                 let r = Ray point direction
-                                                                 let direction = normalize direction
+                                                                 let d = normalize direction
+                                                                 let r = Ray point d
                                                                  let xs = intersect cyl r
                                                                  length xs `shouldBe` count) testData
                   it "The default closed value for a cylinder" $ do
@@ -1141,18 +1141,22 @@ main = hspec $ do
                       mapM_ (\(point, normal) -> do
                                                              let n = normal_at cyl point
                                                              n `shouldBe` normal) testData
---               describe "Cones" $ do
---                  it "Intersecting a cone with a ray" $ do
+               describe "Cones" $ do
+                  it "Intersecting a cone with a ray" $ do
+                      let shape = makeCone
+                      let testData = [(makePoint 0 0 (-5), makeVector 0 0 1, 5, 5),
+                                      (makePoint 0 0 (-5), makeVector 1 1 1, 8.66025, 8.66035),
+                                      (makePoint 1 1 (-5), makeVector (-0.5) (-1) 1, 4.55006, 49.44994)]
+                      mapM_ (\(origin, direction, t0, t1) -> do
+                                                             let d = normalize direction
+                                                             let r = Ray origin d
+                                                             let xs = intersect shape r
+                                                             length xs `shouldBe` 2
+                                                             tValue (xs !! 0 ) `shouldBe` t0
+                                                             tValue (xs !! 1 ) `shouldBe` t1) testData
+--                  it "Intersecting a cone with a ray parallel to one of its halves" $ do
 --                      let shape = makeCone
---                      let testData = [(makePoint 0 0 (-5), makeVector 0 0 1, 5, 5),
---                                      (makePoint 0 0 (-5), makeVector 1 1 1, 8.66025, 8.66035),
---                                      (makePoint 1 1 (-5), makeVector 0 (-1) 0),
---                                      (makePoint 0 2 0, makeVector 0 1 0),
---                                      (makePoint 0 2 0.5, makeVector 0 1 0)]
---                      mapM_ (\(origin, direction, t0, t1) -> do
---                                                             let direction = normalize direction
---                                                             let r = Ray origin direction
---                                                             let xs = intersect shape r
---                                                             length xs `shouldBe` 2
---                                                             tValue (xs !! 0 ) `shouldBe` t0
---                                                             tValue (xs !! 1 ) `shouldBe` t1) testData
+--                      let direction = normalize (makeVector 0 1 1)
+--                      let r = Ray makePoint 0 0 (-1) direction
+--                      let xs = intersect shape r
+--                      length xs `shouldBe`

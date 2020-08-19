@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
---
+-- stack ghci --ghci-options -isrc --ghci-options -itest ray-tracer:ray-tracer-test
 module Lib
        where
 import Data.Array.Unboxed
@@ -82,6 +82,14 @@ data Shape = Sphere {
     shapeMaterial :: Material
     }
     | Cylinder {
+    shapeId :: Int,
+    shapeTransform :: Matrix,
+    shapeMaterial :: Material,
+    shapeMinimum :: Double,
+    shapeMaximum :: Double,
+    shapeClosed :: Bool
+    }
+    | Cone {
     shapeId :: Int,
     shapeTransform :: Matrix,
     shapeMaterial :: Material,
@@ -436,6 +444,8 @@ makeCube = Cube 5 identity4 material
 makeCylinder :: Shape
 makeCylinder = Cylinder 5 identity4 material (-infinity) infinity False
 
+makeCone :: Shape
+makeCone = Cone 5 identity4 material (-infinity) infinity False
 makeWorld :: World
 makeWorld = World [] (Light (makePoint 0 0 0) white)
 
@@ -519,7 +529,7 @@ intersect cyl@(Cylinder _ _ _ _ _ _) r = let trx = shapeTransform cyl
                                              c = xP^2 + zP^2 - 1
                                              disc = b^2 - 4 * a * c in
                                    if (abs a) < epsilon || disc < 0
-                                   then []
+                                   then intersect_caps cyl r
                                    else let t0 = (-b - (sqrt disc)) / (2*a)
                                             t1 = (-b + (sqrt disc))/ (2*a)
                                             (t0',t1') = if t0 > t1
@@ -533,7 +543,29 @@ intersect cyl@(Cylinder _ _ _ _ _ _) r = let trx = shapeTransform cyl
                                             xs' = if shapeMinimum cyl < y1 && y1 < shapeMaximum cyl
                                                   then [Intersection t1' cyl]
                                                   else [] in
-                                       xs ++ xs'
+                                       xs ++ xs' ++ (intersect_caps cyl r)
+intersect cone@(Cone  _ _ _ _ _ _) r = let trx = shapeTransform cone
+                                           Ray (xP,yP,zP,wP) (xV,yV,zV,wV) = transform (inverse trx) r
+                                           a = xV^2 - yV^2 + xV^2
+                                           b = (2 * xP * xV) - (2 * yP * yV) + (2 * zP * zV)
+                                           c = xP^2 - yP^2 + zP^2
+                                           disc = b^2 - 4 * a * c in
+                                 if (abs a) < epsilon || disc < 0
+                                 then []
+                                 else let t0 = (-b - (sqrt disc)) / (2*a)
+                                          t1 = (-b + (sqrt disc))/ (2*a)
+                                          (t0',t1') = if t0 > t1
+                                                      then (t1,t0)
+                                                      else (t0,t1)
+                                          y0 = yP + t0' * yV
+                                          xs = if shapeMinimum cone < y0 && y0 < shapeMaximum cone
+                                               then [Intersection t0' cone]
+                                               else []
+                                          y1 = yP + t1' * yV
+                                          xs' = if shapeMinimum cone < y1 && y1 < shapeMaximum cone
+                                                then [Intersection t1' cone]
+                                                else [] in
+                                     xs ++ xs'
 
 intersect_caps :: Shape -> Ray -> [Intersection]
 intersect_caps cyl ray@(Ray (xO, yO, zO, _) (xD, yD, zD, _)) = if shapeClosed cyl == False || (abs yD) < epsilon
@@ -547,8 +579,6 @@ intersect_caps cyl ray@(Ray (xO, yO, zO, _) (xD, yD, zD, _)) = if shapeClosed cy
                                                                               then [Intersection t' cyl]
                                                                               else [] in
                                                                xs ++ xs'
-
-
 check_cap :: Ray -> Double -> Bool
 check_cap ray@ (Ray (xO, yO, zO, _)(xD, yD, zD, _)) t = let x = xO + t * xD
                                                             z = zO + t * zD in
@@ -638,7 +668,7 @@ normal_at s@(Cube _ _ _) p@(x,y,z,_) = let maxc = maximum [abs x, abs y, abs z] 
                                        else makeVector 0 0 z
 normal_at s@(Cylinder _ _ _ _ _ _) p@(x,y,z,_) = let dist = x^2 + z^2 in
                                                  if dist < 1 && y >= ((shapeMaximum s) - epsilon)
-                                                 then makeVector 0 (-1) 0
+                                                 then makeVector 0 (1) 0
                                                  else if dist < 1 && y <= ((shapeMinimum s) + epsilon)
                                                  then makeVector 0 (-1) 0
                                                  else makeVector x 0 z
