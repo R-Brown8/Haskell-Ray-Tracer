@@ -1085,12 +1085,12 @@ main = hspec $ do
                                      (makePoint 0 0 (-5), makeVector 0 0 1, 4, 6),
                                      (makePoint 0.5 0 (-5), makeVector 0.1 1 1, 6.80798, 7.08872)]
                      mapM_ (\(origin, direction, t1, t2) -> do
-                                                               let r = Ray origin direction
-                                                               let direction = normalize direction
+                                                               let d = normalize direction
+                                                               let r = Ray origin d
                                                                let xs = intersect cyl r
                                                                length xs `shouldBe` 2
-                                                               tValue (xs !! 0) `shouldBe` t1
-                                                               tValue (xs !! 1) `shouldBe` t2) testData
+                                                               tValue (xs !! 0) `equalN` t1 `shouldBe` True
+                                                               tValue (xs !! 1) `equalN` t2 `shouldBe` True) testData
                   it "Normal vector on a cylinder" $ do
                       let cyl = makeCylinder
                       let testData = [(makePoint 1 0 0, makeVector 1 0 0),
@@ -1121,14 +1121,38 @@ main = hspec $ do
                       (shapeClosed cyl) `shouldBe` False
                   it "Intersecting the caps of a closed cylinder" $ do
                       let cyl = makeCylinder {shapeMaximum = 2, shapeMinimum = 1, shapeClosed = True}
-                      let testData = [
---                                      (makePoint 0 3 0, makeVector 0 (-1) 0, 2)
---                                      (makePoint 0 3 (-2), makeVector 0 (-1) 2, 2),
---                                      (makePoint 0 4 (-2), makeVector 0 (-1) 1, 2),
---                                      (makePoint 0 0 (-2), makeVector 0 1 2, 2),
+                      let testData = [(makePoint 0 3 0, makeVector 0 (-1) 0, 2),
+                                      (makePoint 0 3 (-2), makeVector 0 (-1) 2, 2),
+                                      (makePoint 0 4 (-2), makeVector 0 (-1) 1, 2),
+                                      (makePoint 0 0 (-2), makeVector 0 1 2, 2),
                                       (makePoint 0 (-1) (-2), makeVector 0 1 1, 2)]
                       mapM_ (\(point, direction, count) -> do
-                                                             let r = Ray point direction
-                                                             let direction = normalize direction
+                                                             let d = normalize direction
+                                                             let r = Ray point d
                                                              let xs = intersect cyl r
                                                              length xs `shouldBe` count) testData
+                  it "The normal vector on a cylinders end caps" $ do
+                      let cyl = makeCylinder {shapeMaximum = 2, shapeMinimum = 1, shapeClosed = True}
+                      let testData = [(makePoint 0 1 0, makeVector 0 (-1) 0),
+                                      (makePoint 0.5 1 0, makeVector 0 (-1) 0),
+                                      (makePoint 0 1 0.5, makeVector 0 (-1) 0),
+                                      (makePoint 0 2 0, makeVector 0 1 0),
+                                      (makePoint 0 2 0.5, makeVector 0 1 0)]
+                      mapM_ (\(point, normal) -> do
+                                                             let n = normal_at cyl point
+                                                             n `shouldBe` normal) testData
+--               describe "Cones" $ do
+--                  it "Intersecting a cone with a ray" $ do
+--                      let shape = makeCone
+--                      let testData = [(makePoint 0 0 (-5), makeVector 0 0 1, 5, 5),
+--                                      (makePoint 0 0 (-5), makeVector 1 1 1, 8.66025, 8.66035),
+--                                      (makePoint 1 1 (-5), makeVector 0 (-1) 0),
+--                                      (makePoint 0 2 0, makeVector 0 1 0),
+--                                      (makePoint 0 2 0.5, makeVector 0 1 0)]
+--                      mapM_ (\(origin, direction, t0, t1) -> do
+--                                                             let direction = normalize direction
+--                                                             let r = Ray origin direction
+--                                                             let xs = intersect shape r
+--                                                             length xs `shouldBe` 2
+--                                                             tValue (xs !! 0 ) `shouldBe` t0
+--                                                             tValue (xs !! 1 ) `shouldBe` t1) testData

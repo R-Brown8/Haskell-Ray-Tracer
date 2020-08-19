@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
--- stack ghci --ghci-options -isrc --ghci-options -itest ray-tracer:ray-tracer-test
+--
 module Lib
        where
 import Data.Array.Unboxed
@@ -636,8 +636,12 @@ normal_at s@(Cube _ _ _) p@(x,y,z,_) = let maxc = maximum [abs x, abs y, abs z] 
                                        else if maxc == abs y
                                        then makeVector 0 y 0
                                        else makeVector 0 0 z
-normal_at s@(Cylinder _ _ _ _ _ _) p@(x,y,z,_) = makeVector x 0 z
-
+normal_at s@(Cylinder _ _ _ _ _ _) p@(x,y,z,_) = let dist = x^2 + z^2 in
+                                                 if dist < 1 && y >= ((shapeMaximum s) - epsilon)
+                                                 then makeVector 0 (-1) 0
+                                                 else if dist < 1 && y <= ((shapeMinimum s) + epsilon)
+                                                 then makeVector 0 (-1) 0
+                                                 else makeVector x 0 z
 
 reflect :: Vector -> Vector -> Vector
 reflect inward normal = let d = dot inward normal in
